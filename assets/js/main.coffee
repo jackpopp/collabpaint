@@ -24,11 +24,27 @@ PaintBoard = ->
 	self.mouseDown = false
 	self.lastX = null
 	self.lastY = null
+	self.socket = null
 
 	self.construct = ->
 		self.setCanvas()
 		self.setEventHandlers()
 		self.setFrameAnimation()
+
+		self.socket = new SockJS('/echo');
+
+		self.socket.onopen = ->
+			console.log('open');
+			return
+
+		self.socket.onmessage = (e) ->
+			console.log('message', e.data);
+			return
+
+		self.socket.onclose = ->
+			console.log('close');
+			return
+
 		return
 
 	self.setMouseDown = (val) ->
@@ -79,6 +95,8 @@ PaintBoard = ->
 				self.paintObjects.push new PaintObject(num, y, self.currentColor)
 		self.lastX = event.clientX
 		self.lastY = event.clientY
+		#self.socket.emit('newPaint', { message: 'painted' });
+		self.socket.send('painted');
 		return
 
 	self.setEventHandlers = ->
@@ -96,7 +114,4 @@ PaintBoard = ->
 
 $ ->
 	new PaintBoard()
-	socket = io.connect('http://localhost:3000');
-	socket.on('news', (data) ->
-		console.log(data);
-	);
+	return

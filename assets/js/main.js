@@ -28,10 +28,21 @@ PaintBoard = function() {
   self.mouseDown = false;
   self.lastX = null;
   self.lastY = null;
+  self.socket = null;
   self.construct = function() {
     self.setCanvas();
     self.setEventHandlers();
     self.setFrameAnimation();
+    self.socket = new SockJS('/echo');
+    self.socket.onopen = function() {
+      console.log('open');
+    };
+    self.socket.onmessage = function(e) {
+      console.log('message', e.data);
+    };
+    self.socket.onclose = function() {
+      console.log('close');
+    };
   };
   self.setMouseDown = function(val) {
     self.mouseDown = val;
@@ -88,6 +99,7 @@ PaintBoard = function() {
     }
     self.lastX = event.clientX;
     self.lastY = event.clientY;
+    self.socket.send('painted');
   };
   self.setEventHandlers = function() {
     $(window).mousedown(function() {
@@ -108,11 +120,5 @@ PaintBoard = function() {
 };
 
 $(function() {
-  var socket;
-
   new PaintBoard();
-  socket = io.connect('http://localhost:3000');
-  return socket.on('news', function(data) {
-    return console.log(data);
-  });
 });

@@ -1,14 +1,26 @@
-/*var net = require('net');
+var port = 8080;
+var express = require('express');
+var app = express();
+var server = app.listen(port);
+var sockjs = require('sockjs');
 
-var server = net.createServer(function(socket){
-	socket.write('Echo Server\n\r');
-	socket.pipe(socket);
-})
+var connections  = {};
+var paintObjects = {};
 
-server.listen(3000, 'localhost');*/
+app.engine('html', require('ejs').renderFile);
 
-var io = require('socket.io').listen(3000);
+app.use('/assets', express.static(__dirname + '/assets'));
 
-io.sockets.on('connection', function (socket) {
-	io.sockets.emit('news', { will: 'be received by everyone'});
+app.get('/', function(req, res){
+	res.render('./index.html');
 });
+
+var echo = sockjs.createServer();
+echo.on('connection', function(conn) {
+    conn.on('data', function(message) {
+        conn.write(message);
+    });
+    conn.on('close', function() {});
+});
+
+echo.installHandlers(server, {prefix:'/echo'});
