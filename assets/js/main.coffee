@@ -43,8 +43,12 @@ PaintBoard = ->
 
 		self.socket.onmessage = (e) ->
 			data = JSON.parse(e.data)
+			# we've opened a connection and want to set return a created connection id and already painted objects.
 			if data.hasOwnProperty('createdConnectionId')
+				console.log data.currentPaintObjects
 				self.connectionId = data.createdConnectionId
+				for obj in data.currentPaintObjects
+					self.paintObjects.push new PaintObject(obj.x, obj.y, self.currentColor)
 			if data.hasOwnProperty('type') and data.type is 'paint' and data.connectionId isnt self.connectionId
 				for obj in data.cords
 					self.paintObjects.push new PaintObject(obj.x, obj.y, self.currentColor)

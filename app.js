@@ -5,7 +5,7 @@ var server = app.listen(port);
 var sockjs = require('sockjs');
 
 var connections  = [];
-var paintObjects = {};
+var paintObjects = [];
 
 app.engine('html', require('ejs').renderFile);
 
@@ -19,18 +19,19 @@ var echo = sockjs.createServer();
 echo.on('connection', function(conn) {
 
 	// create connection id, save in connections and send back to client
-	connectionId = Math.random().toString(36).substr(2, 5);
-	connections[connectionId] = conn;
-
-	conn.write( JSON.stringify({createdConnectionId: connectionId}) );
+	connections[conn.id] = conn;
+	conn.write( JSON.stringify({createdConnectionId: conn.id, currentPaintObjects: paintObjects}) );
 
     conn.on('data', function(message) {
     	// check if connection id exists, if it does regiser the paint object and send to all clients
     	data = JSON.parse(message)
     	if (data.hasOwnProperty('connectionId'))
     	{
+            for (id in data.cords)
+               paintObjects.push(data.cords[id]);
+
     		for (id in connections)
-    			connections[id].write( message );
+    			connections[id].write(message);
     	}
     });
     conn.on('close', function() {});

@@ -43,16 +43,22 @@ PaintBoard = function() {
     */
 
     self.socket.onmessage = function(e) {
-      var data, obj, _i, _len, _ref;
+      var data, obj, _i, _j, _len, _len1, _ref, _ref1;
 
       data = JSON.parse(e.data);
       if (data.hasOwnProperty('createdConnectionId')) {
+        console.log(data.currentPaintObjects);
         self.connectionId = data.createdConnectionId;
-      }
-      if (data.hasOwnProperty('type') && data.type === 'paint' && data.connectionId !== self.connectionId) {
-        _ref = data.cords;
+        _ref = data.currentPaintObjects;
         for (_i = 0, _len = _ref.length; _i < _len; _i++) {
           obj = _ref[_i];
+          self.paintObjects.push(new PaintObject(obj.x, obj.y, self.currentColor));
+        }
+      }
+      if (data.hasOwnProperty('type') && data.type === 'paint' && data.connectionId !== self.connectionId) {
+        _ref1 = data.cords;
+        for (_j = 0, _len1 = _ref1.length; _j < _len1; _j++) {
+          obj = _ref1[_j];
           self.paintObjects.push(new PaintObject(obj.x, obj.y, self.currentColor));
         }
       }
