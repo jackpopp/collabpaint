@@ -29,16 +29,33 @@ PaintBoard = function() {
   self.lastX = null;
   self.lastY = null;
   self.socket = null;
+  self.connectionId = null;
   self.construct = function() {
     self.setCanvas();
     self.setEventHandlers();
     self.setFrameAnimation();
     self.socket = new SockJS('/echo');
-    self.socket.onopen = function() {
-      console.log('open');
-    };
+    /*
+    		self.socket.onopen = (e) ->
+    			self.connectionId = e
+    			console.log e
+    			return
+    */
+
     self.socket.onmessage = function(e) {
-      console.log('message', e.data);
+      var data, obj, _i, _len, _ref;
+
+      data = JSON.parse(e.data);
+      if (data.hasOwnProperty('createdConnectionId')) {
+        self.connectionId = data.createdConnectionId;
+      }
+      if (data.hasOwnProperty('type') && data.type === 'paint' && data.connectionId !== self.connectionId) {
+        _ref = data.cords;
+        for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+          obj = _ref[_i];
+          self.paintObjects.push(new PaintObject(obj.x, obj.y, self.currentColor));
+        }
+      }
     };
     self.socket.onclose = function() {
       console.log('close');
@@ -71,20 +88,10 @@ PaintBoard = function() {
     paint();
   };
   self.handleStroke = function(event) {
-    /*
-    		credit u/jasonbar @http://stackoverflow.com/questions/2441362/php-find-coordinates-between-two-points
-    		$pt1 = array(0, 0);
-    		$pt2 = array(10, 10);
-    		$m = ($pt1[1] - $pt2[1]) / ($pt1[0] - $pt2[0]);
-    		$b = $pt1[1] - $m * $pt1[0];
-    
-    		for ($i = $pt1[0]; $i <= $pt2[0]; $i++)
-    		    $points[] = array($i, $m * $i + $b);
-    */
-
-    var b, m, num, pointOne, pointTwo, y, _i, _ref, _ref1;
+    var b, cordsArray, m, num, pointOne, pointTwo, y, _i, _ref, _ref1;
 
     if (self.lastY !== null && self.lastX !== null) {
+      cordsArray = [];
       pointOne = [self.lastX, self.lastY];
       pointTwo = [event.clientX, event.clientY];
       m = (pointOne[1] - pointTwo[1]) / (pointOne[0] - pointTwo[0]);
@@ -95,11 +102,20 @@ PaintBoard = function() {
           y = event.clientY;
         }
         self.paintObjects.push(new PaintObject(num, y, self.currentColor));
+        cordsArray.push({
+          x: num,
+          y: y
+        });
       }
+      self.socket.send(JSON.stringify({
+        type: 'paint',
+        connectionId: self.connectionId,
+        cords: cordsArray,
+        color: self.currentColor
+      }));
     }
     self.lastX = event.clientX;
     self.lastY = event.clientY;
-    self.socket.send('painted');
   };
   self.setEventHandlers = function() {
     $(window).mousedown(function() {

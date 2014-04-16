@@ -25,6 +25,7 @@ PaintBoard = ->
 	self.lastX = null
 	self.lastY = null
 	self.socket = null
+	self.connectionId = null
 
 	self.construct = ->
 		self.setCanvas()
@@ -33,16 +34,24 @@ PaintBoard = ->
 
 		self.socket = new SockJS('/echo');
 
-		self.socket.onopen = ->
-			console.log('open');
+		###
+		self.socket.onopen = (e) ->
+			self.connectionId = e
+			console.log e
 			return
+		###
 
 		self.socket.onmessage = (e) ->
-			console.log('message', e.data);
+			data = JSON.parse(e.data)
+			if data.hasOwnProperty('createdConnectionId')
+				self.connectionId = data.createdConnectionId
+			if data.hasOwnProperty('type') and data.type is 'paint' and data.connectionId isnt self.connectionId
+				for obj in data.cords
+					self.paintObjects.push new PaintObject(obj.x, obj.y, self.currentColor)
 			return
 
 		self.socket.onclose = ->
-			console.log('close');
+			console.log('close')
 			return
 
 		return
@@ -73,17 +82,9 @@ PaintBoard = ->
 		return
 
 	self.handleStroke = (event) ->
-		###
-		credit u/jasonbar @http://stackoverflow.com/questions/2441362/php-find-coordinates-between-two-points
-		$pt1 = array(0, 0);
-		$pt2 = array(10, 10);
-		$m = ($pt1[1] - $pt2[1]) / ($pt1[0] - $pt2[0]);
-		$b = $pt1[1] - $m * $pt1[0];
-
-		for ($i = $pt1[0]; $i <= $pt2[0]; $i++)
-		    $points[] = array($i, $m * $i + $b);
-		###
+		# credit u/jasonbar @http://stackoverflow.com/questions/2441362/php-find-coordinates-between-two-points
 		if self.lastY isnt null and self.lastX isnt null
+			cordsArray = []
 			pointOne = [self.lastX, self.lastY]
 			pointTwo = [event.clientX, event.clientY]
 			m = ( (pointOne[1] - pointTwo[1]) / (pointOne[0] - pointTwo[0]) )
@@ -93,10 +94,13 @@ PaintBoard = ->
 				if m is -Infinity or m is Infinity or b is -Infinity or b is Infinity 
 					y = event.clientY
 				self.paintObjects.push new PaintObject(num, y, self.currentColor)
+				cordsArray.push {x: num, y: y}
+
+			# send array of cords, connection id and colour
+			self.socket.send( JSON.stringify({type: 'paint', connectionId: self.connectionId, cords: cordsArray, color: self.currentColor}) );
+
 		self.lastX = event.clientX
 		self.lastY = event.clientY
-		#self.socket.emit('newPaint', { message: 'painted' });
-		self.socket.send('painted');
 		return
 
 	self.setEventHandlers = ->
