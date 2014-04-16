@@ -31,33 +31,8 @@ PaintBoard = ->
 		self.setCanvas()
 		self.setEventHandlers()
 		self.setFrameAnimation()
-
-		self.socket = new SockJS('/echo');
-
-		###
-		self.socket.onopen = (e) ->
-			self.connectionId = e
-			console.log e
-			return
-		###
-
-		self.socket.onmessage = (e) ->
-			data = JSON.parse(e.data)
-			# we've opened a connection and want to set return a created connection id and already painted objects.
-			if data.hasOwnProperty('createdConnectionId')
-				console.log data.currentPaintObjects
-				self.connectionId = data.createdConnectionId
-				for obj in data.currentPaintObjects
-					self.paintObjects.push new PaintObject(obj.x, obj.y, self.currentColor)
-			if data.hasOwnProperty('type') and data.type is 'paint' and data.connectionId isnt self.connectionId
-				for obj in data.cords
-					self.paintObjects.push new PaintObject(obj.x, obj.y, self.currentColor)
-			return
-
-		self.socket.onclose = ->
-			console.log('close')
-			return
-
+		self.setSockets()
+		self.currentColor = self.getRandomColor()
 		return
 
 	self.setMouseDown = (val) ->
@@ -66,6 +41,9 @@ PaintBoard = ->
 
 	self.getMouseDown = -> 
 		return self.mouseDown
+
+	self.getRandomColor = ->
+		return '#'+Math.floor(Math.random()*16777215).toString(16)
 
 	self.setCanvas = ->
 		self.canvas = $('.js-main-canvas')
@@ -98,13 +76,39 @@ PaintBoard = ->
 				if m is -Infinity or m is Infinity or b is -Infinity or b is Infinity 
 					y = event.clientY
 				self.paintObjects.push new PaintObject(num, y, self.currentColor)
-				cordsArray.push {x: num, y: y}
+				cordsArray.push {x: num, y: y, color: self.currentColor}
 
 			# send array of cords, connection id and colour
 			self.socket.send( JSON.stringify({type: 'paint', connectionId: self.connectionId, cords: cordsArray, color: self.currentColor}) );
 
 		self.lastX = event.clientX
 		self.lastY = event.clientY
+		return
+
+	self.setSockets = ->
+		self.socket = new SockJS('/echo');
+		###
+		self.socket.onopen = (e) ->
+			self.connectionId = e
+			console.log e
+			return
+		###
+
+		self.socket.onmessage = (e) ->
+			data = JSON.parse(e.data)
+			# we've opened a connection and want to set return a created connection id and already painted objects.
+			if data.hasOwnProperty('createdConnectionId')
+				self.connectionId = data.createdConnectionId
+				for obj in data.currentPaintObjects
+					self.paintObjects.push new PaintObject(obj.x, obj.y, obj.color)
+			if data.hasOwnProperty('type') and data.type is 'paint' and data.connectionId isnt self.connectionId
+				for obj in data.cords
+					self.paintObjects.push new PaintObject(obj.x, obj.y, obj.color)
+			return
+
+		self.socket.onclose = ->
+			console.log('close')
+			return
 		return
 
 	self.setEventHandlers = ->

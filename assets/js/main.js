@@ -34,44 +34,17 @@ PaintBoard = function() {
     self.setCanvas();
     self.setEventHandlers();
     self.setFrameAnimation();
-    self.socket = new SockJS('/echo');
-    /*
-    		self.socket.onopen = (e) ->
-    			self.connectionId = e
-    			console.log e
-    			return
-    */
-
-    self.socket.onmessage = function(e) {
-      var data, obj, _i, _j, _len, _len1, _ref, _ref1;
-
-      data = JSON.parse(e.data);
-      if (data.hasOwnProperty('createdConnectionId')) {
-        console.log(data.currentPaintObjects);
-        self.connectionId = data.createdConnectionId;
-        _ref = data.currentPaintObjects;
-        for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-          obj = _ref[_i];
-          self.paintObjects.push(new PaintObject(obj.x, obj.y, self.currentColor));
-        }
-      }
-      if (data.hasOwnProperty('type') && data.type === 'paint' && data.connectionId !== self.connectionId) {
-        _ref1 = data.cords;
-        for (_j = 0, _len1 = _ref1.length; _j < _len1; _j++) {
-          obj = _ref1[_j];
-          self.paintObjects.push(new PaintObject(obj.x, obj.y, self.currentColor));
-        }
-      }
-    };
-    self.socket.onclose = function() {
-      console.log('close');
-    };
+    self.setSockets();
+    self.currentColor = self.getRandomColor();
   };
   self.setMouseDown = function(val) {
     self.mouseDown = val;
   };
   self.getMouseDown = function() {
     return self.mouseDown;
+  };
+  self.getRandomColor = function() {
+    return '#' + Math.floor(Math.random() * 16777215).toString(16);
   };
   self.setCanvas = function() {
     self.canvas = $('.js-main-canvas');
@@ -110,7 +83,8 @@ PaintBoard = function() {
         self.paintObjects.push(new PaintObject(num, y, self.currentColor));
         cordsArray.push({
           x: num,
-          y: y
+          y: y,
+          color: self.currentColor
         });
       }
       self.socket.send(JSON.stringify({
@@ -122,6 +96,39 @@ PaintBoard = function() {
     }
     self.lastX = event.clientX;
     self.lastY = event.clientY;
+  };
+  self.setSockets = function() {
+    self.socket = new SockJS('/echo');
+    /*
+    		self.socket.onopen = (e) ->
+    			self.connectionId = e
+    			console.log e
+    			return
+    */
+
+    self.socket.onmessage = function(e) {
+      var data, obj, _i, _j, _len, _len1, _ref, _ref1;
+
+      data = JSON.parse(e.data);
+      if (data.hasOwnProperty('createdConnectionId')) {
+        self.connectionId = data.createdConnectionId;
+        _ref = data.currentPaintObjects;
+        for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+          obj = _ref[_i];
+          self.paintObjects.push(new PaintObject(obj.x, obj.y, obj.color));
+        }
+      }
+      if (data.hasOwnProperty('type') && data.type === 'paint' && data.connectionId !== self.connectionId) {
+        _ref1 = data.cords;
+        for (_j = 0, _len1 = _ref1.length; _j < _len1; _j++) {
+          obj = _ref1[_j];
+          self.paintObjects.push(new PaintObject(obj.x, obj.y, obj.color));
+        }
+      }
+    };
+    self.socket.onclose = function() {
+      console.log('close');
+    };
   };
   self.setEventHandlers = function() {
     $(window).mousedown(function() {
